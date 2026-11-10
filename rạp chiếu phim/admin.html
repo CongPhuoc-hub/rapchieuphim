@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TPP CINEMA - Cổng Quản Trị Viên</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>body { font-family: sans-serif; background-color: #070a12; color: #f1f5f9; }</style>
+</head>
+<body class="p-6">
+
+    <!-- ĐĂNG NHẬP ADMIN -->
+    <div id="adminAuth" class="fixed inset-0 bg-slate-950 flex items-center justify-center z-50">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl text-center max-w-sm w-full">
+            <h3 class="text-xl font-bold text-purple-400 mb-2">Đăng Nhập Quản Trị</h3>
+            <p class="text-xs text-slate-400 mb-4">Nhập mật khẩu (Mặc định: admin123)</p>
+            <input type="password" id="passInput" placeholder="••••••••" class="w-full bg-slate-950 border border-slate-800 text-center py-2 text-white font-bold rounded-xl mb-4">
+            <button onclick="verifyAdmin()" class="w-full py-2 bg-purple-600 text-white font-bold rounded-xl">Vào Hệ Thống</button>
+        </div>
+    </div>
+
+    <!-- MAIN APP ADMIN -->
+    <div id="adminApp" class="max-w-7xl mx-auto space-y-8 hidden">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+            <h2 class="text-2xl font-black text-purple-400"><i class="fa-solid fa-user-shield"></i> QUẢN TRỊ HỆ THỐNG TPP CINEMA</h2>
+            <button onclick="location.reload()" class="px-3 py-1.5 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold"><i class="fa-solid fa-rotate"></i> Làm mới dữ liệu</button>
+        </div>
+
+        <!-- THỐNG KÊ DOANH THU -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+                <span class="text-xs text-slate-400">Doanh Thu Online</span>
+                <p id="revOnline" class="text-2xl font-black text-rose-400">0 VNĐ</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+                <span class="text-xs text-slate-400">Doanh Thu POS Quầy</span>
+                <p id="revPos" class="text-2xl font-black text-amber-400">0 VNĐ</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+                <span class="text-xs text-slate-400">Tổng Vé Đã Bán</span>
+                <p id="totalTickets" class="text-2xl font-black text-white">0 Vé</p>
+            </div>
+        </div>
+
+        <!-- MỚI: QUẢN LÝ NHÂN VIÊN (HỌ TÊN, SĐT, ĐỊA CHỈ, CA LÀM, NĂM SINH) -->
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-lg"><i class="fa-solid fa-users-gear text-purple-400"></i> QUẢN LÝ NHÂN VIÊN THU NGÂN / RẠP</h3>
+                <button onclick="document.getElementById('addStaffModal').classList.remove('hidden')" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-xl text-xs font-bold text-white">+ Thêm Nhân Viên Mới</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-800 text-slate-400 bg-slate-950/50">
+                            <th class="p-3">Họ và Tên</th>
+                            <th class="p-3">Số Điện Thoại</th>
+                            <th class="p-3">Năm Sinh</th>
+                            <th class="p-3">Ca Làm Việc</th>
+                            <th class="p-3">Địa Chỉ</th>
+                            <th class="p-3 text-right">Thao Tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="staffTableBody" class="divide-y divide-slate-800/60"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- QUẢN LÝ PHIM -->
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-lg"><i class="fa-solid fa-clapperboard text-purple-400"></i> KHO PHIM RẠP</h3>
+                <button onclick="document.getElementById('addMovieModal').classList.remove('hidden')" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-xl text-xs font-bold text-white">+ Thêm Phim Chi Tiết</button>
+            </div>
+            <div id="adminMovieList" class="divide-y divide-slate-800"></div>
+        </div>
+
+        <!-- QUẢN LÝ 6 PHÒNG CHIẾU -->
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-lg"><i class="fa-solid fa-door-open text-purple-400"></i> QUẢN LÝ SUẤT CHIẾU TRÊN 6 PHÒNG</h3>
+                <button onclick="openAddShowtimeModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-xl text-xs font-bold text-white">+ Tạo Suất Chiếu Mới</button>
+            </div>
+            <div id="showtimeRoomsList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+    </div>
+
+    <!-- MODAL THÊM NHÂN VIÊN MỚI -->
+    <div id="addStaffModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl max-w-md w-full shadow-2xl">
+            <h3 class="text-lg font-bold text-white mb-4">Thêm Nhân Viên Mới</h3>
+            <form onsubmit="saveNewStaff(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="text-slate-400 block mb-1">Họ và Tên</label>
+                    <input type="text" id="sName" placeholder="Nguyễn Văn A" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white outline-none focus:border-purple-500">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-slate-400 block mb-1">Số Điện Thoại</label>
+                        <input type="tel" id="sPhone" placeholder="0901234567" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white outline-none focus:border-purple-500">
+                    </div>
+                    <div>
+                        <label class="text-slate-400 block mb-1">Năm Sinh</label>
+                        <input type="number" id="sBirth" placeholder="2000" min="1960" max="2008" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white outline-none focus:border-purple-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-slate-400 block mb-1">Ca Làm Việc</label>
+                    <select id="sShift" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white outline-none focus:border-purple-500">
+                        <option value="Ca Sáng (08:00 - 14:00)">Ca Sáng (08:00 - 14:00)</option>
+                        <option value="Ca Chiều (14:00 - 20:00)">Ca Chiều (14:00 - 20:00)</option>
+                        <option value="Ca Tối (20:00 - 24:00)">Ca Tối (20:00 - 24:00)</option>
+                        <option value="Full-time (Cả Ngày)">Full-time (Cả Ngày)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-slate-400 block mb-1">Địa Chỉ Thường Trú</label>
+                    <input type="text" id="sAddress" placeholder="Quận 1, TP.HCM" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white outline-none focus:border-purple-500">
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="document.getElementById('addStaffModal').classList.add('hidden')" class="w-1/2 py-2 bg-slate-800 rounded-xl text-white font-bold">Hủy</button>
+                    <button type="submit" class="w-1/2 py-2 bg-purple-600 rounded-xl text-white font-bold">Lưu Nhân Viên</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL THÊM PHIM CHI TIẾT -->
+    <div id="addMovieModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl max-w-md w-full shadow-2xl">
+            <h3 class="text-lg font-bold text-white mb-4">Thêm Phim Mới Chi Tiết</h3>
+            <form onsubmit="saveNewMovie(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="text-slate-400 block mb-1">Tên phim</label>
+                    <input type="text" id="mTitle" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-slate-400 block mb-1">Thể loại</label>
+                        <input type="text" id="mGenre" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                    </div>
+                    <div>
+                        <label class="text-slate-400 block mb-1">Thời lượng</label>
+                        <input type="text" id="mDuration" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-slate-400 block mb-1">Giá vé gốc</label>
+                        <input type="number" id="mPrice" required value="100000" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                    </div>
+                    <div>
+                        <label class="text-slate-400 block mb-1">Độ tuổi</label>
+                        <input type="text" id="mAge" value="C13" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-slate-400 block mb-1">Link Poster URL</label>
+                    <input type="url" id="mPoster" required value="https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="document.getElementById('addMovieModal').classList.add('hidden')" class="w-1/2 py-2 bg-slate-800 rounded-xl text-white font-bold">Hủy</button>
+                    <button type="submit" class="w-1/2 py-2 bg-purple-600 rounded-xl text-white font-bold">Lưu Phim</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL TẠO SUẤT CHIẾU MỚI -->
+    <div id="addShowtimeModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl max-w-md w-full shadow-2xl">
+            <h3 class="text-lg font-bold text-white mb-2">Tạo Suất Chiếu Mới</h3>
+            <form onsubmit="saveNewShowtime(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="text-slate-400 block mb-1">Tên Phim</label>
+                    <input list="movieSuggestions" id="stMovieInput" placeholder="-- Chọn hoặc Gõ tên phim mới --" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                    <datalist id="movieSuggestions"></datalist>
+                </div>
+                <div>
+                    <label class="text-slate-400 block mb-1">Phòng Chiếu</label>
+                    <select id="stRoom" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                        <option value="Phòng 1 (IMAX 3D Laser)">Phòng 1 (IMAX 3D Laser)</option>
+                        <option value="Phòng 2 (VIP Lux Recliner)">Phòng 2 (VIP Lux Recliner)</option>
+                        <option value="Phòng 3 (Standard Dolby 7.1)">Phòng 3 (Standard Dolby 7.1)</option>
+                        <option value="Phòng 4 (ScreenX 270°)">Phòng 4 (ScreenX 270°)</option>
+                        <option value="Phòng 5 (4DX Motion FX)">Phòng 5 (4DX Motion FX)</option>
+                        <option value="Phòng 6 (Private VIP Suite)">Phòng 6 (Private VIP Suite)</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-slate-400 block mb-1">Ngày Chiếu</label>
+                        <input type="text" id="stDate" value="Hôm nay" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                    </div>
+                    <div>
+                        <label class="text-slate-400 block mb-1">Giờ Chiếu</label>
+                        <input type="time" id="stTime" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                    </div>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="document.getElementById('addShowtimeModal').classList.add('hidden')" class="w-1/2 py-2 bg-slate-800 rounded-xl text-white font-bold">Hủy</button>
+                    <button type="submit" class="w-1/2 py-2 bg-purple-600 rounded-xl text-white font-bold">Tạo Suất Chiếu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // DỮ LIỆU NHÂN VIÊN MẶC ĐỊNH
+        const defaultStaffList = [
+            { id: 1, name: 'Trần Văn Nam', phone: '0912345678', birth: '1998', shift: 'Ca Sáng (08:00 - 14:00)', address: 'Quận 1, TP.HCM' },
+            { id: 2, name: 'Nguyễn Thị Hoa', phone: '0987654321', birth: '2001', shift: 'Ca Chiều (14:00 - 20:00)', address: 'Quận 3, TP.HCM' },
+            { id: 3, name: 'Lê Hoàng Long', phone: '0933445566', birth: '1999', shift: 'Ca Tối (20:00 - 24:00)', address: 'Bình Thạnh, TP.HCM' }
+        ];
+
+        let staffData = JSON.parse(localStorage.getItem('tpp_staff')) || defaultStaffList;
+        localStorage.setItem('tpp_staff', JSON.stringify(staffData));
+
+        let moviesData = JSON.parse(localStorage.getItem('tpp_movies')) || [];
+        let showtimesData = JSON.parse(localStorage.getItem('tpp_showtimes')) || [];
+        let tickets = JSON.parse(localStorage.getItem('tpp_tickets')) || [];
+
+        function verifyAdmin() {
+            if(document.getElementById('passInput').value === 'admin123') {
+                document.getElementById('adminAuth').classList.add('hidden');
+                document.getElementById('adminApp').classList.remove('hidden');
+                initDashboard();
+            } else alert('Mật khẩu sai! (Nhập admin123)');
+        }
+
+        function initDashboard() {
+            const online = tickets.filter(t => t.channel === 'Online').reduce((sum, t) => sum + t.amount, 0);
+            const pos = tickets.filter(t => t.channel === 'POS Quầy').reduce((sum, t) => sum + t.amount, 0);
+
+            document.getElementById('revOnline').innerText = online.toLocaleString() + ' VNĐ';
+            document.getElementById('revPos').innerText = pos.toLocaleString() + ' VNĐ';
+            document.getElementById('totalTickets').innerText = tickets.length + ' Vé';
+
+            renderStaff();
+            renderMovies();
+            renderShowtimes();
+        }
+
+        /* HÀM HIỂN THỊ DANH SÁCH NHÂN VIÊN */
+        function renderStaff() {
+            const tbody = document.getElementById('staffTableBody');
+            tbody.innerHTML = staffData.map(s => `
+                <tr class="hover:bg-slate-800/40 transition">
+                    <td class="p-3 font-bold text-white">${s.name}</td>
+                    <td class="p-3 text-purple-400 font-semibold">${s.phone}</td>
+                    <td class="p-3 text-slate-300">${s.birth}</td>
+                    <td class="p-3"><span class="bg-amber-500/20 text-amber-400 px-2 py-1 rounded-md text-[10px] font-bold border border-amber-500/30">${s.shift}</span></td>
+                    <td class="p-3 text-slate-400">${s.address}</td>
+                    <td class="p-3 text-right">
+                        <button onclick="deleteStaff(${s.id})" class="text-rose-500 hover:text-rose-400 font-bold px-2.5 py-1 border border-rose-500/30 rounded-lg bg-rose-500/10">Xóa</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        /* HÀM THÊM NHÂN VIÊN MỚI */
+        function saveNewStaff(e) {
+            e.preventDefault();
+            const newStaff = {
+                id: Date.now(),
+                name: document.getElementById('sName').value.trim(),
+                phone: document.getElementById('sPhone').value.trim(),
+                birth: document.getElementById('sBirth').value,
+                shift: document.getElementById('sShift').value,
+                address: document.getElementById('sAddress').value.trim()
+            };
+
+            staffData.push(newStaff);
+            localStorage.setItem('tpp_staff', JSON.stringify(staffData));
+            document.getElementById('addStaffModal').classList.add('hidden');
+            renderStaff();
+            alert('Đã thêm nhân viên mới thành công!');
+        }
+
+        /* HÀM XÓA NHÂN VIÊN */
+        function deleteStaff(id) {
+            if(confirm('Bạn có chắc chắn muốn xóa nhân viên này?')) {
+                staffData = staffData.filter(s => s.id !== id);
+                localStorage.setItem('tpp_staff', JSON.stringify(staffData));
+                renderStaff();
+            }
+        }
+
+        function renderMovies() {
+            document.getElementById('adminMovieList').innerHTML = moviesData.map(m => `
+                <div class="py-3 flex justify-between items-center text-xs">
+                    <div class="flex items-center gap-3">
+                        <img src="${m.poster || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500'}" class="w-10 h-14 object-cover rounded">
+                        <div>
+                            <strong class="text-white text-sm block">${m.title}</strong>
+                            <p class="text-slate-400">Thể loại: ${m.genre || 'Phim Rạp'} | ${m.duration || '120 phút'}</p>
+                            <p class="text-amber-400 font-bold">Giá vé base: ${(m.price || 100000).toLocaleString()} VNĐ</p>
+                        </div>
+                    </div>
+                    <button onclick="deleteMovie(${m.id})" class="text-rose-500 font-bold px-3 py-1 border border-rose-500/30 rounded-lg hover:bg-rose-500/10">Xóa Phim</button>
+                </div>
+            `).join('');
+        }
+
+        function saveNewMovie(e) {
+            e.preventDefault();
+            const newMovie = {
+                id: Date.now(),
+                title: document.getElementById('mTitle').value.trim().toUpperCase(),
+                genre: document.getElementById('mGenre').value,
+                duration: document.getElementById('mDuration').value,
+                price: parseFloat(document.getElementById('mPrice').value),
+                age: document.getElementById('mAge').value,
+                imdb: '8.5',
+                poster: document.getElementById('mPoster').value,
+                status: 'now'
+            };
+            moviesData.push(newMovie);
+            localStorage.setItem('tpp_movies', JSON.stringify(moviesData));
+            document.getElementById('addMovieModal').classList.add('hidden');
+            renderMovies();
+            alert('Đã thêm phim mới thành công!');
+        }
+
+        function deleteMovie(id) {
+            if(confirm('Xác nhận xóa phim này khỏi kho?')) {
+                moviesData = moviesData.filter(m => m.id !== id);
+                showtimesData = showtimesData.filter(s => s.movieId !== id);
+                localStorage.setItem('tpp_movies', JSON.stringify(moviesData));
+                localStorage.setItem('tpp_showtimes', JSON.stringify(showtimesData));
+                renderMovies();
+                renderShowtimes();
+            }
+        }
+
+        function renderShowtimes() {
+            const container = document.getElementById('showtimeRoomsList');
+            const rooms = [
+                'Phòng 1 (IMAX 3D Laser)',
+                'Phòng 2 (VIP Lux Recliner)',
+                'Phòng 3 (Standard Dolby 7.1)',
+                'Phòng 4 (ScreenX 270°)',
+                'Phòng 5 (4DX Motion FX)',
+                'Phòng 6 (Private VIP Suite)'
+            ];
+
+            container.innerHTML = rooms.map(r => {
+                const list = showtimesData.filter(s => s.room === r);
+                return `
+                    <div class="bg-slate-950 p-4 border border-slate-800 rounded-2xl space-y-2">
+                        <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                            <h4 class="font-bold text-amber-400 text-xs">${r}</h4>
+                            <span class="text-[10px] bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2 py-0.5 rounded-md font-bold">50 Ghế</span>
+                        </div>
+                        <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                            ${list.length > 0 ? list.map(s => {
+                                const m = moviesData.find(x => x.id === s.movieId);
+                                return `
+                                    <div class="flex justify-between items-center text-[11px] text-slate-300">
+                                        <span class="truncate max-w-[170px]">🎬 <strong>${m?.title || 'Phim'}</strong></span>
+                                        <span class="text-rose-400 font-bold">${s.time}</span>
+                                    </div>
+                                `;
+                            }).join('') : '<p class="text-[10px] text-slate-500 italic">Chưa có suất chiếu</p>'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openAddShowtimeModal() {
+            const datalist = document.getElementById('movieSuggestions');
+            datalist.innerHTML = moviesData.map(m => `<option value="${m.title}">`).join('');
+            document.getElementById('stMovieInput').value = '';
+            document.getElementById('addShowtimeModal').classList.remove('hidden');
+        }
+
+        function saveNewShowtime(e) {
+            e.preventDefault();
+            const inputTitle = document.getElementById('stMovieInput').value.trim().toUpperCase();
+            if(!inputTitle) return alert('Vui lòng nhập hoặc chọn tên phim!');
+
+            let movie = moviesData.find(m => m.title === inputTitle);
+            if(!movie) {
+                movie = {
+                    id: Date.now(),
+                    title: inputTitle,
+                    genre: 'Phim Chiếu Rạp',
+                    duration: '120 phút',
+                    price: 100000,
+                    age: 'C13',
+                    imdb: '8.5',
+                    poster: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500',
+                    status: 'now'
+                };
+                moviesData.push(movie);
+                localStorage.setItem('tpp_movies', JSON.stringify(moviesData));
+            }
+
+            const newSt = {
+                id: Date.now(),
+                movieId: movie.id,
+                room: document.getElementById('stRoom').value,
+                date: document.getElementById('stDate').value,
+                time: document.getElementById('stTime').value
+            };
+
+            showtimesData.push(newSt);
+            localStorage.setItem('tpp_showtimes', JSON.stringify(showtimesData));
+
+            document.getElementById('addShowtimeModal').classList.add('hidden');
+            renderMovies();
+            renderShowtimes();
+            alert(`Đã tạo suất chiếu cho phim "${movie.title}" thành công!`);
+        }
+    </script>
+</body>
+</html>
