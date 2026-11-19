@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TPP CINEMA - Đặt Vé Xem Phim Online</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #070a12; color: #f1f5f9; }
+        .glass-panel { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .screen-curve { height: 18px; width: 100%; border-top: 4px solid #e11d48; border-radius: 50% 50% 0 0 / 100% 100% 0 0; background: linear-gradient(to bottom, rgba(225, 29, 72, 0.2), transparent); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <header class="bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 flex items-center justify-between h-16">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-600 to-amber-500 flex items-center justify-center font-black text-white">TPP</div>
+                <span class="text-xl font-black text-white tracking-wider">TPP CINEMA</span>
+            </div>
+            <nav class="flex space-x-6 text-sm font-medium">
+                <button onclick="switchTab('nowShowingTab')" class="text-rose-500 flex items-center gap-2"><i class="fa-solid fa-film"></i> Phim Đang Chiếu</button>
+                <button onclick="switchTab('comingSoonTab')" class="text-slate-400 hover:text-white flex items-center gap-2"><i class="fa-solid fa-calendar-days"></i> Phim Sắp Chiếu</button>
+                <button onclick="switchTab('myTicketsTab')" class="text-slate-400 hover:text-white flex items-center gap-2"><i class="fa-solid fa-ticket"></i> Vé Của Tôi</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-10">
+        <div class="relative rounded-3xl overflow-hidden border border-slate-800 bg-slate-900 min-h-[380px] flex items-end p-8 shadow-2xl">
+            <div id="heroBg" class="absolute inset-0 bg-cover bg-center"></div>
+            <div class="absolute inset-0 bg-gradient-to-t from-[#070a12] via-[#070a12]/70 to-transparent"></div>
+            <div class="relative z-10 space-y-3 max-w-2xl">
+                <span class="px-2.5 py-1 rounded-md bg-rose-600 text-white font-black text-xs uppercase">SIÊU PHẨM HOT NHẤT</span>
+                <h2 id="heroTitle" class="text-4xl font-black text-white">AVATAR: DÒNG CHẢY CỦA NƯỚC</h2>
+                <p id="heroMeta" class="text-sm text-slate-300"></p>
+                <button id="heroBookBtn" class="px-6 py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs uppercase shadow-lg transition flex items-center gap-2">
+                    <i class="fa-solid fa-ticket"></i> ĐẶT VÉ NHANH NGAY
+                </button>
+            </div>
+        </div>
+
+        <div id="nowShowingTab" class="tab-content">
+            <h3 class="text-2xl font-black text-white mb-6 flex items-center gap-2"><i class="fa-solid fa-fire text-rose-500"></i> PHIM ĐANG CHIẾU TẠI RẠP</h3>
+            <div id="nowShowingGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+        </div>
+
+        <div id="comingSoonTab" class="tab-content hidden">
+            <h3 class="text-2xl font-black text-white mb-6 flex items-center gap-2"><i class="fa-solid fa-sparkles text-amber-400"></i> PHIM SẮP KHỞI CHIẾU</h3>
+            <div id="comingSoonGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+        </div>
+
+        <div id="myTicketsTab" class="tab-content hidden">
+            <h3 class="text-2xl font-black text-white mb-6 flex items-center gap-2"><i class="fa-solid fa-ticket text-rose-500"></i> VÉ ĐIỆN TỬ CỦA TÔI</h3>
+            <div id="ticketsList" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+        </div>
+    </main>
+
+    <div id="bookingModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
+                <div>
+                    <h3 id="modalTitle" class="text-lg font-bold text-white">Đặt Vé Xem Phim</h3>
+                    <p id="modalSubTitle" class="text-xs text-rose-400 font-bold">Bước 1: Chọn suất chiếu</p>
+                </div>
+                <button onclick="closeBookingModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        const fullMoviesList = [
+            { id: 1, title: 'AVATAR: DÒNG CHẢY CỦA NƯỚC', price: 120000, duration: '192 phút', age: 'C13', imdb: '8.9', genre: 'Viễn Tưởng, Hành Động', status: 'now', poster: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500' },
+            { id: 2, title: 'OPPENHEIMER: KẺ HỦY DIỆT', price: 110000, duration: '180 phút', age: 'C18', imdb: '9.0', genre: 'Tâm Lý, Lịch Sử', status: 'now', poster: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500' },
+            { id: 3, title: 'CONAN: TÀU NGẦM SẮT DẦM', price: 90000, duration: '110 phút', age: 'P', imdb: '8.2', genre: 'Hoạt Hình, Trinh Thám', status: 'now', poster: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500' },
+            { id: 4, title: 'LẬT MẶT 7: CÓ ĐIỀU ƯỚC', price: 100000, duration: '138 phút', age: 'C13', imdb: '8.7', genre: 'Gia Đình, Hài', status: 'now', poster: 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=500' },
+            { id: 5, title: 'SPIDER-MAN: SPIDER-VERSE', price: 115000, duration: '140 phút', age: 'P', imdb: '8.9', genre: 'Hoạt Hình, Hành Động', status: 'now', poster: 'https://images.unsplash.com/photo-1635805737707-575885ab0820?w=500' },
+            { id: 6, title: 'THE BATMAN 2022', price: 105000, duration: '176 phút', age: 'C16', imdb: '7.8', genre: 'Hành Động, Tội Phạm', status: 'now', poster: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500' },
+            { id: 7, title: 'FAST X: QUÁ NHANH QUÁ TỐC ĐỘ', price: 110000, duration: '141 phút', age: 'C13', imdb: '7.2', genre: 'Hành Động, Đua Xe', status: 'now', poster: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=500' },
+            { id: 8, title: 'GODZILLA x KONG: ĐẾ CHẾ MỚI', price: 125000, duration: '115 phút', age: 'C13', imdb: '8.1', genre: 'Quái Vật, Viễn Tưởng', status: 'now', poster: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500' }
+        ];
+
+        // BỔ SUNG ĐẦY ĐỦ CÁC SUẤT CHIẾU CHO TẤT CẢ 6 PHÒNG CHIẾU PHIM
+        const fullShowtimesList = [
+            // Phim 1: Avatar (Có suất trên toàn bộ 6 Phòng)
+            { id: 101, movieId: 1, room: 'Phòng 1 (IMAX 3D Laser)', date: 'Hôm nay', time: '14:30' },
+            { id: 102, movieId: 1, room: 'Phòng 2 (VIP Lux Recliner)', date: 'Hôm nay', time: '16:00' },
+            { id: 103, movieId: 1, room: 'Phòng 3 (Standard Dolby 7.1)', date: 'Hôm nay', time: '17:45' },
+            { id: 104, movieId: 1, room: 'Phòng 4 (ScreenX 270°)', date: 'Hôm nay', time: '19:15' },
+            { id: 105, movieId: 1, room: 'Phòng 5 (4DX Motion FX)', date: 'Hôm nay', time: '20:30' },
+            { id: 106, movieId: 1, room: 'Phòng 6 (Private VIP Suite)', date: 'Hôm nay', time: '21:45' },
+            
+            // Các suất chiếu cho phim khác trên các phòng
+            { id: 107, movieId: 2, room: 'Phòng 2 (VIP Lux Recliner)', date: 'Hôm nay', time: '18:30' },
+            { id: 108, movieId: 3, room: 'Phòng 3 (Standard Dolby 7.1)', date: 'Hôm nay', time: '20:00' },
+            { id: 109, movieId: 4, room: 'Phòng 4 (ScreenX 270°)', date: 'Hôm nay', time: '21:30' },
+            { id: 110, movieId: 5, room: 'Phòng 5 (4DX Motion FX)', date: 'Hôm nay', time: '18:00' }
+        ];
+
+        // Tự động làm mới localStorage để hiển thị ngay 6 phòng
+        localStorage.setItem('tpp_movies', JSON.stringify(fullMoviesList));
+        localStorage.setItem('tpp_showtimes', JSON.stringify(fullShowtimesList));
+
+        let moviesData = fullMoviesList;
+        let showtimesData = fullShowtimesList;
+        let tickets = JSON.parse(localStorage.getItem('tpp_tickets')) || [];
+        
+        const comboOptions = [
+            { id: 'c1', name: 'Combo Solo (1 Bắp L + 1 Soda)', price: 85000 },
+            { id: 'c2', name: 'Combo Couple (1 Bắp XL + 2 Soda)', price: 120000 },
+            { id: 'c3', name: 'Combo Family (2 Bắp L + 4 Soda)', price: 190000 }
+        ];
+
+        let currentBookingStep = 1;
+        let onlineMovie = null, onlineShowtime = null, onlineSeats = [];
+        let onlineCombos = { c1: 0, c2: 0, c3: 0 };
+
+        window.onload = function() { renderCustomerMovies(); };
+
+        function renderCustomerMovies() {
+            const nowMovies = moviesData.filter(m => m.status === 'now');
+            const soonMovies = moviesData.filter(m => m.status === 'soon');
+            document.getElementById('nowShowingGrid').innerHTML = nowMovies.map(m => createMovieCardHTML(m, true)).join('');
+            document.getElementById('comingSoonGrid').innerHTML = soonMovies.map(m => createMovieCardHTML(m, false)).join('');
+
+            if(nowMovies.length > 0) {
+                const hero = nowMovies[0];
+                document.getElementById('heroTitle').innerText = hero.title;
+                document.getElementById('heroMeta').innerText = `${hero.genre} • ${hero.duration}`;
+                document.getElementById('heroBg').style.backgroundImage = `url('${hero.poster}')`;
+                document.getElementById('heroBookBtn').onclick = () => startOnlineBooking(hero.id);
+            }
+        }
+
+        function createMovieCardHTML(m, isNow) {
+            return `
+                <div class="glass-panel rounded-3xl overflow-hidden flex flex-col justify-between hover:border-rose-500/50 transition duration-300">
+                    <div class="relative">
+                        <img src="${m.poster}" class="h-64 w-full object-cover">
+                        <span class="absolute top-2 left-2 bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded">${m.age}</span>
+                        <span class="absolute top-2 right-2 bg-black/70 text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded"><i class="fa-solid fa-star"></i> ${m.imdb}</span>
+                    </div>
+                    <div class="p-4">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">${m.genre}</p>
+                        <h4 class="font-bold text-white text-sm mb-1 line-clamp-1">${m.title}</h4>
+                        <p class="text-xs text-rose-500 font-black">${m.price.toLocaleString()} VNĐ</p>
+                    </div>
+                    <div class="p-4 pt-0">
+                        ${isNow ? `<button onclick="startOnlineBooking(${m.id})" class="w-full py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold text-xs transition">ĐẶT VÉ NGAY</button>` : `<button disabled class="w-full py-2 bg-slate-800 text-slate-500 rounded-xl font-bold text-xs cursor-not-allowed">SẮP CHIẾU</button>`}
+                    </div>
+                </div>
+            `;
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+            if(tabId === 'myTicketsTab') renderTicketsHistory();
+        }
+
+        function startOnlineBooking(movieId) {
+            onlineMovie = moviesData.find(m => m.id === movieId);
+            onlineShowtime = showtimesData.find(s => s.movieId === movieId) || showtimesData[0];
+            currentBookingStep = 1; onlineSeats = []; onlineCombos = { c1: 0, c2: 0, c3: 0 };
+            document.getElementById('bookingModal').classList.remove('hidden');
+            renderBookingStep();
+        }
+
+        function renderBookingStep() {
+            const body = document.getElementById('modalBody');
+            document.getElementById('modalTitle').innerText = `Phim: ${onlineMovie.title}`;
+
+            if(currentBookingStep === 1) {
+                document.getElementById('modalSubTitle').innerText = 'Bước 1: Chọn Suất Chiếu & Phòng Chiếu (6 Phòng)';
+                const showtimes = showtimesData.filter(s => s.movieId === onlineMovie.id);
+                body.innerHTML = `
+                    <div class="space-y-4">
+                        <p class="text-xs text-slate-300">Danh sách suất chiếu khả dụng trên tất cả các phòng:</p>
+                        <div class="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
+                            ${showtimes.length > 0 ? showtimes.map(s => `
+                                <button onclick="selectOnlineShowtime(${s.id})" class="p-3 rounded-2xl border text-left ${onlineShowtime?.id === s.id ? 'border-rose-500 bg-rose-500/10' : 'border-slate-800 bg-slate-950'}">
+                                    <p class="text-xs font-bold text-amber-400">${s.room}</p>
+                                    <p class="text-sm font-black text-rose-500">${s.time}</p>
+                                </button>
+                            `).join('') : '<p class="text-xs text-slate-500 col-span-2">Chưa có suất chiếu cho phim này.</p>'}
+                        </div>
+                        <button onclick="goToStep(2)" class="w-full py-2.5 bg-rose-600 hover:bg-rose-500 rounded-xl font-bold text-xs text-white">Tiếp theo: Chọn Ghế <i class="fa-solid fa-arrow-right ml-1"></i></button>
+                    </div>
+                `;
+            } else if(currentBookingStep === 2) {
+                document.getElementById('modalSubTitle').innerText = 'Bước 2: Sơ Đồ Ghế (50 Ghế Real-time)';
+                body.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="screen-curve mb-2"></div>
+                        <div id="onlineSeatGrid" class="grid grid-cols-10 gap-1.5 max-w-xl mx-auto"></div>
+                        <div class="flex justify-between items-center p-4 bg-slate-950 rounded-2xl border border-slate-800">
+                            <div>
+                                <p class="text-xs text-slate-400">Ghế chọn: <span id="selectedSeatsLabel" class="text-rose-400 font-bold">-</span></p>
+                                <p id="step2Total" class="text-lg font-black text-rose-500">0 VNĐ</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="goToStep(1)" class="px-4 py-2 bg-slate-800 text-xs font-bold rounded-xl">Quay lại</button>
+                                <button onclick="goToStep(3)" class="px-4 py-2 bg-rose-600 text-xs font-bold rounded-xl text-white">Tiếp: Chọn Combo Bắp Nước <i class="fa-solid fa-arrow-right"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                renderOnlineSeats();
+            } else if(currentBookingStep === 3) {
+                document.getElementById('modalSubTitle').innerText = 'Bước 3: Chọn Combo Bắp Rang & Nước Uống';
+                body.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="space-y-2">
+                            ${comboOptions.map(c => `
+                                <div class="p-3 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-between text-xs">
+                                    <div>
+                                        <p class="font-bold text-white">${c.name}</p>
+                                        <p class="text-rose-400 font-semibold">${c.price.toLocaleString()} VNĐ</p>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button onclick="updateComboQty('${c.id}', -1)" class="w-7 h-7 rounded-lg bg-slate-800 text-white font-bold">-</button>
+                                        <span class="w-4 text-center font-bold text-amber-400">${onlineCombos[c.id]}</span>
+                                        <button onclick="updateComboQty('${c.id}', 1)" class="w-7 h-7 rounded-lg bg-slate-800 text-white font-bold">+</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="p-4 bg-slate-950 rounded-2xl border border-slate-800 flex justify-between items-center">
+                            <div>
+                                <p class="text-[10px] text-slate-400">TỔNG VÉ + COMBO:</p>
+                                <p class="text-xl font-black text-rose-500">${calculateOnlineTotal().toLocaleString()} VNĐ</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="goToStep(2)" class="px-4 py-2 bg-slate-800 text-xs font-bold rounded-xl">Quay lại</button>
+                                <button onclick="goToStep(4)" class="px-5 py-2 bg-rose-600 text-xs font-bold rounded-xl text-white uppercase">Thanh Toán <i class="fa-solid fa-arrow-right"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if(currentBookingStep === 4) {
+                document.getElementById('modalSubTitle').innerText = 'Bước 4: Xác Nhận Thanh Toán';
+                const total = calculateOnlineTotal();
+                body.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2 text-xs">
+                            <div class="flex justify-between"><span>Phim:</span><strong class="text-white">${onlineMovie.title}</strong></div>
+                            <div class="flex justify-between"><span>Phòng & Suất:</span><strong class="text-amber-400">${onlineShowtime.room} (${onlineShowtime.time})</strong></div>
+                            <div class="flex justify-between"><span>Ghế:</span><strong class="text-rose-400">${onlineSeats.join(', ')}</strong></div>
+                            <div class="flex justify-between"><span>Combo:</span><strong class="text-emerald-400">${getComboSummaryStr()}</strong></div>
+                            <div class="flex justify-between text-sm font-bold pt-2 border-t border-slate-800"><span>TỔNG CỘNG:</span><strong class="text-rose-500 text-base">${total.toLocaleString()} VNĐ</strong></div>
+                        </div>
+                        <button onclick="confirmOnlinePayment(${total})" class="w-full py-3 bg-rose-600 hover:bg-rose-500 rounded-xl font-bold text-xs uppercase text-white">Xác nhận thanh toán & Nhận vé QR</button>
+                    </div>
+                `;
+            }
+        }
+
+        function selectOnlineShowtime(id) { onlineShowtime = showtimesData.find(s => s.id === id); renderBookingStep(); }
+        function goToStep(s) {
+            if(s === 3 && onlineSeats.length === 0) { alert('Vui lòng chọn ít nhất 1 ghế!'); return; }
+            currentBookingStep = s; renderBookingStep(); 
+        }
+        function updateComboQty(id, delta) { onlineCombos[id] = Math.max(0, onlineCombos[id] + delta); renderBookingStep(); }
+        function getComboSummaryStr() {
+            let res = [];
+            if(onlineCombos.c1 > 0) res.push(`${onlineCombos.c1}x Solo`);
+            if(onlineCombos.c2 > 0) res.push(`${onlineCombos.c2}x Couple`);
+            if(onlineCombos.c3 > 0) res.push(`${onlineCombos.c3}x Family`);
+            return res.length > 0 ? res.join(', ') : 'Không';
+        }
+
+        function renderOnlineSeats() {
+            const grid = document.getElementById('onlineSeatGrid');
+            if(!grid) return;
+            const rows = ['A', 'B', 'C', 'D', 'E'];
+            let html = '';
+            rows.forEach(row => {
+                for(let num = 1; num <= 10; num++) {
+                    const seatNo = `${row}${num < 10 ? '0' + num : num}`;
+                    const isSelected = onlineSeats.includes(seatNo);
+                    const isVip = (row === 'D' || row === 'E');
+                    html += `<button onclick="toggleOnlineSeat('${seatNo}')" class="h-8 rounded text-[10px] font-bold ${isSelected ? 'bg-rose-600 text-white' : (isVip ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-slate-800 text-slate-300')}">${seatNo}</button>`;
+                }
+            });
+            grid.innerHTML = html;
+            document.getElementById('selectedSeatsLabel').innerText = onlineSeats.length > 0 ? onlineSeats.join(', ') : '-';
+            document.getElementById('step2Total').innerText = calculateOnlineTotal().toLocaleString() + ' VNĐ';
+        }
+
+        function toggleOnlineSeat(seat) {
+            if(onlineSeats.includes(seat)) onlineSeats = onlineSeats.filter(s => s !== seat);
+            else onlineSeats.push(seat);
+            renderOnlineSeats();
+        }
+
+        function calculateOnlineTotal() {
+            let total = 0;
+            onlineSeats.forEach(seat => {
+                const row = seat.charAt(0);
+                total += (row === 'D' || row === 'E') ? onlineMovie.price + 20000 : onlineMovie.price;
+            });
+            total += (onlineCombos.c1 * 85000) + (onlineCombos.c2 * 120000) + (onlineCombos.c3 * 190000);
+            return total;
+        }
+
+        function confirmOnlinePayment(amount) {
+            const ticketCode = 'TPP-' + Math.floor(100000 + Math.random() * 900000);
+            tickets.push({ id: ticketCode, movieTitle: onlineMovie.title, showtime: `${onlineShowtime.room} (${onlineShowtime.time})`, seats: onlineSeats.join(', '), combo: getComboSummaryStr(), amount, channel: 'Online', date: new Date().toLocaleString() });
+            localStorage.setItem('tpp_tickets', JSON.stringify(tickets));
+            alert('Đặt vé thành công! Mã vé: ' + ticketCode);
+            closeBookingModal();
+        }
+
+        function closeBookingModal() { document.getElementById('bookingModal').classList.add('hidden'); }
+        function renderTicketsHistory() {
+            document.getElementById('ticketsList').innerHTML = tickets.map(t => `
+                <div class="glass-panel p-4 rounded-2xl">
+                    <h4 class="font-bold text-white">${t.movieTitle}</h4>
+                    <p class="text-xs text-slate-400">Suất: ${t.showtime} | Ghế: ${t.seats}</p>
+                    <p class="text-xs text-emerald-400">Combo: ${t.combo || 'Không'}</p>
+                    <p class="text-xs text-rose-500 font-bold mt-2">Mã: ${t.id}</p>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
